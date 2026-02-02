@@ -4,7 +4,7 @@ import os
 
 FIREBASE_URL = "https://heartbeat-kamaleeva-default-rtdb.firebaseio.com/heartbeat.json"
 
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+BOT_TOKEN = os.environ.get("TELEGRAM_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 
 MAX_DELAY_SECONDS = 15 * 60  # 15 минут
