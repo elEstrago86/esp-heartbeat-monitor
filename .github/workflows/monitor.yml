@@ -2,7 +2,7 @@ name: ESP Heartbeat Monitor
 
 on:
   schedule:
-    - cron: "*/2 * * * *"   # каждые 2 минуты
+    - cron: "*/5 * * * *"  
   workflow_dispatch:
 
 jobs:
