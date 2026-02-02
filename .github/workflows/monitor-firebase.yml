@@ -1,28 +1,44 @@
-name: ESP Heartbeat Monitor
+name: Monitor Firebase
 
 on:
   schedule:
-    - cron: "*/5 * * * *"   # каждые 5 минут
-  workflow_dispatch:         # возможность запускать вручную
+    - cron: '*/5 * * * *' # каждые 5 минут
+  workflow_dispatch: # возможность запускать вручную
 
 jobs:
-  monitor:
+  check_firebase:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v3
 
-      - name: Set environment variables
+      - name: Install jq
+        run: sudo apt-get update && sudo apt-get install -y jq curl
+
+      - name: Get Firebase timestamp
         run: |
-          echo "FIREBASE_URL=${{ secrets.FIREBASE_URL }}" >> $GITHUB_ENV
-          echo "TELEGRAM_TOKEN=${{ secrets.TELEGRAM_TOKEN }}" >> $GITHUB_ENV
-          echo "TELEGRAM_CHAT_ID=${{ secrets.TELEGRAM_CHAT_ID }}" >> $GITHUB_ENV
+          FIREBASE_URL="https://heartbeat-kamaleeva-default-rtdb.firebaseio.com/heartbeat.json"
+          curl -s $FIREBASE_URL -o response.json
+          TIMESTAMP=$(jq .timestamp response.json)
+          echo "Timestamp from Firebase: $TIMESTAMP"
+          
+          # Получаем текущее время в миллисекундах
+          NOW_MS=$(($(date +%s%3N)))
+          echo "Current time (ms): $NOW_MS"
+          
+          # Разница между текущим временем и timestamp
+          DIFF=$((NOW_MS - TIMESTAMP))
+          echo "Diff: $DIFF ms"
 
-      - name: Check heartbeat
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.x"
-
-      - name: Run monitor script
-        run: python monitor.py
+          # Если разница больше 10 минут (600_000 мс), отправляем Telegram-алерт
+          if [ $DIFF -gt 600000 ]; then
+            echo "Timestamp too old, sending Telegram alert!"
+            TELEGRAM_BOT_TOKEN="${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            TELEGRAM_CHAT_ID="${{ secrets.TELEGRAM_CHAT_ID }}"
+            MESSAGE="⚠️ Electricity might be OFF!"
+            curl -s -X POST "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+              -d chat_id=$TELEGRAM_CHAT_ID \
+              -d text="$MESSAGE"
+          else
+            echo "Timestamp is fresh."
+          fi
