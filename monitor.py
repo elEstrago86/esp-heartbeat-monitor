@@ -13,22 +13,23 @@ FIREBASE_URL = os.environ.get("FIREBASE_URL")  # например: https://heart
 # ======================
 MAX_MISSED = 4                 # Максимальное количество пропущенных heartbeat
 
-# Файл для хранения последнего timestamp и счётчика пропусков
-STATE_FILE = "state.json"
-
-
-# ======================
-# Функции
-# ======================
-def get_firebase_timestamp():
+def get_firebase_data():
     try:
         resp = requests.get(FIREBASE_URL, timeout=10)
         resp.raise_for_status()
-        data = resp.json()
-        return int(data.get("timestamp", 0))
+        return resp.json()
     except Exception as e:
-        print("Error fetching Firebase timestamp:", e)
-        return 0
+        print("Error fetching Firebase data:", e)
+        return {}
+
+def update_firebase_data(data):
+    try:
+        resp = requests.put(FIREBASE_URL, json=data, timeout=10)
+        resp.raise_for_status()
+        return resp.json()
+    except Exception as e:
+        print("Error updating Firebase data:", e)
+        return {}
 
 def send_telegram_alert(message):
     try:
@@ -38,40 +39,41 @@ def send_telegram_alert(message):
     except Exception as e:
         print("Error sending Telegram message:", e)
 
-def load_state():
-    try:
-        with open(STATE_FILE, "r") as f:
-            return json.load(f)
-    except:
-        return {"last_timestamp": 0, "missed": 0}
-
-def save_state(state):
-    with open(STATE_FILE, "w") as f:
-        json.dump(state, f)
-
 # ======================
 # Основной блок
 # ======================
 def main():
-    fb_timestamp = get_firebase_timestamp()
-    state = load_state()
+    fb_data = get_firebase_data()
+    current_ts = fb_data.get("timestamp", 0)
+    missed = fb_data.get("missed", 0)
 
-    print(f"Timestamp from Firebase: {fb_timestamp}")
-    print(f"Last timestamp: {state['last_timestamp']}")
+    print(f"Firebase timestamp: {current_ts}")
+    print(f"Firebase missed count: {missed}")
 
-    if fb_timestamp == state["last_timestamp"]:
-        state["missed"] += 1
-        print(f"No update detected. Missed count: {state['missed']}")
+    # Проверяем, обновился ли таймстамп
+    last_ts = fb_data.get("last_ts", 0)
+    if current_ts == last_ts:
+        missed += 1
+        print(f"No update detected. Missed count: {missed}")
     else:
-        state["missed"] = 0
-        state["last_timestamp"] = fb_timestamp
+        missed = 0
         print("Timestamp updated. Missed count reset.")
 
-    if state["missed"] >= MAX_MISSED:
+    # Если достигли порога, шлем Telegram
+    if missed >= MAX_MISSED:
         print("Alert threshold reached, sending Telegram alert!")
         send_telegram_alert("⚠️ Electricity might be OFF!")
 
-    save_state(state)
+    # Обновляем данные в Firebase
+    update_data = {
+        "timestamp": current_ts,
+        "last_ts": current_ts,
+        "missed": missed
+    }
+    update_firebase_data(update_data)
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
