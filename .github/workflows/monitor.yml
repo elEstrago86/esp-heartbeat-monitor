@@ -30,3 +30,4 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          FIREBASE_URL: https://heartbeat-kamaleeva-default-rtdb.firebaseio.com/heartbeat.json
