@@ -2,7 +2,7 @@ name: ESP Heartbeat Monitor
 
 on:
   schedule:
-    # запуск каждые 5 минут — максимальная частота GitHub Actions
+    # запуск каждые 5 минут (максимально быстро для GitHub Actions)
     - cron: "*/5 * * * *"
   workflow_dispatch:   # кнопка для ручного запуска
 
@@ -22,9 +22,9 @@ jobs:
 
       # 3️⃣ Устанавливаем зависимости
       - name: Install dependencies
-        run: pip install requests python-dotenv
+        run: pip install requests
 
-      # 4️⃣ Запускаем мониторинг с секретами Telegram
+      # 4️⃣ Запускаем monitor.py с передачей секретов и Firebase URL
       - name: Run monitor.py
         run: python monitor.py
         env:
