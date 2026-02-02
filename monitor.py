@@ -3,7 +3,7 @@ import requests
 import os
 
 
-BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
 FIREBASE_URL = os.environ.get("FIREBASE_URL")  # например: https://heartbeat-kamaleeva-default-rtdb.firebaseio.com/heartbeat.json
 
