@@ -1,6 +1,7 @@
 import time
 import requests
 import os
+import json
 
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
@@ -10,10 +11,11 @@ FIREBASE_URL = os.environ.get("FIREBASE_URL")  # например: https://heart
 # ======================
 # Настройки проверки
 # ======================
-# Считаем, что ESP должна обновлять timestamp каждые N секунд
-HEARTBEAT_INTERVAL = 30        # ESP отправляет heartbeat каждые 30 секунд
 MAX_MISSED = 4                 # Максимальное количество пропущенных heartbeat
-ALERT_THRESHOLD = HEARTBEAT_INTERVAL * MAX_MISSED  # секунд
+
+# Файл для хранения последнего timestamp и счётчика пропусков
+STATE_FILE = "state.json"
+
 
 # ======================
 # Функции
@@ -36,23 +38,40 @@ def send_telegram_alert(message):
     except Exception as e:
         print("Error sending Telegram message:", e)
 
+def load_state():
+    try:
+        with open(STATE_FILE, "r") as f:
+            return json.load(f)
+    except:
+        return {"last_timestamp": 0, "missed": 0}
+
+def save_state(state):
+    with open(STATE_FILE, "w") as f:
+        json.dump(state, f)
+
 # ======================
 # Основной блок
 # ======================
 def main():
     fb_timestamp = get_firebase_timestamp()
-    current_time = int(time.time())
-    diff = current_time - fb_timestamp
+    state = load_state()
 
     print(f"Timestamp from Firebase: {fb_timestamp}")
-    print(f"Current time: {current_time}")
-    print(f"Diff: {diff}")
+    print(f"Last timestamp: {state['last_timestamp']}")
 
-    if diff > ALERT_THRESHOLD:
-        print("Timestamp too old, sending Telegram alert!")
-        send_telegram_alert("⚠️ Electricity might be OFF!")
+    if fb_timestamp == state["last_timestamp"]:
+        state["missed"] += 1
+        print(f"No update detected. Missed count: {state['missed']}")
     else:
-        print("Heartbeat is fresh, everything OK.")
+        state["missed"] = 0
+        state["last_timestamp"] = fb_timestamp
+        print("Timestamp updated. Missed count reset.")
+
+    if state["missed"] >= MAX_MISSED:
+        print("Alert threshold reached, sending Telegram alert!")
+        send_telegram_alert("⚠️ Electricity might be OFF!")
+
+    save_state(state)
 
 if __name__ == "__main__":
     main()
