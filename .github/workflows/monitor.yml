@@ -1,9 +1,6 @@
 name: ESP Heartbeat Monitor
 
 on:
-  schedule:
-    # запуск каждые 5 минут (максимально быстро для GitHub Actions)
-    - cron: "*/5 * * * *"
   workflow_dispatch:   # кнопка для ручного запуска
 
 jobs:
